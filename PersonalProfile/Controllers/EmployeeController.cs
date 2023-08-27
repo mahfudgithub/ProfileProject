@@ -2,15 +2,13 @@
 using Microsoft.AspNetCore.Mvc;
 using PersonalProfile.Interface;
 using PersonalProfile.Model.Employee;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+using PersonalProfile.Model.Login;
 using System.Threading.Tasks;
 
 namespace PersonalProfile.Controllers
 {
     [Route("api/[controller]")]
-    [Produces("application/json")]
+    [Produces("application/json")]    
     [ApiController]
     public class EmployeeController : ControllerBase
     {
@@ -29,8 +27,19 @@ namespace PersonalProfile.Controllers
             if (ModelState.IsValid)
             {
                 var result = await _employee.Register(employeeRequest);
-                //return new ObjectResult(result) { StatusCode = StatusCodes.Status201Created };
                 return StatusCode(StatusCodes.Status201Created, result);
+            }
+
+            return BadRequest("Some Properties are not valid ");
+        }
+
+        [HttpPost("Login")]
+        public async Task<IActionResult> LoginAsync([FromBody] LoginRequest loginRequest)
+        {
+            if (ModelState.IsValid)
+            {
+                var result = await _employee.Login(loginRequest);
+                return Ok(result);
             }
 
             return BadRequest("Some Properties are not valid ");

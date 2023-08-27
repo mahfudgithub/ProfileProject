@@ -1,4 +1,6 @@
 using LoggerService;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
@@ -10,6 +12,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
 using NLog;
+using PersonalProfile.ApiKey;
 using PersonalProfile.DataContext;
 using PersonalProfile.Exceptions;
 using PersonalProfile.Interface;
@@ -44,6 +47,20 @@ namespace PersonalProfile
                 options.UseSqlServer(ConnectionString)
             );
 
+            services.AddAuthentication(option =>
+            {
+                option.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+            }).AddJwtBearer();
+
+            services.AddAuthorization(option =>
+            {
+                option.AddPolicy("ApiKeyPolicy", policy =>
+                {
+                    policy.AddAuthenticationSchemes(new[] { JwtBearerDefaults.AuthenticationScheme });
+                    policy.AddRequirements(new ApiKeyRequirement());
+                });
+            });
+
             services.AddIdentity<ApplicationUser, IdentityRole>(opt =>
             {
                 opt.Password.RequireDigit = true;
@@ -53,6 +70,8 @@ namespace PersonalProfile
 
             services.AddTransient<IEmployee, EmployeeRepository>();
             services.AddSingleton<ILoggerManager, LoggerManager>();
+            services.AddTransient<IApiKeyValidation, ApiKeyValidation>();
+            services.AddScoped<IAuthorizationHandler, ApiKeyHandler>();
 
             services.AddCors(option =>
             {
@@ -99,11 +118,15 @@ namespace PersonalProfile
             });
 
             app.UseRouting();
+            app.UseAuthentication();
+            app.UseAuthorization();
 
             app.UseStaticFiles();
 
             app.UseAuthorization();
             app.UseCors(_policyName);
+
+            //app.UseMiddleware<ApiKeyMiddleware>();
 
             app.ConfigureExceptionHandler();
 

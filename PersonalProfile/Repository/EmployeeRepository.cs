@@ -1,9 +1,11 @@
 ﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Configuration;
 using PersonalProfile.DataContext;
 using PersonalProfile.Exceptions;
 using PersonalProfile.Interface;
 using PersonalProfile.Model;
 using PersonalProfile.Model.Employee;
+using PersonalProfile.Model.Login;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,10 +16,54 @@ namespace PersonalProfile.Repository
     public class EmployeeRepository : IEmployee
     {
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly SignInManager<ApplicationUser> _signInManager;
+        private readonly IConfiguration _configuration;
 
-        public EmployeeRepository(UserManager<ApplicationUser> userManager)
+        public EmployeeRepository(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, IConfiguration configuration)
         {
             _userManager = userManager;
+            _signInManager = signInManager;
+            _configuration = configuration;
+        }
+
+        public async Task<WebResponse> Login(LoginRequest loginRequest)
+        {
+            WebResponse webResponse = new WebResponse();
+            var response = new LoginResponse();
+            ApplicationUser applicationUser = new ApplicationUser();
+
+            if (loginRequest.Username.IndexOf('@') > -1)
+            {
+                applicationUser = await ValidateEmail(loginRequest.Username);
+                if (applicationUser == null)
+                {
+                    throw new NotFoundException("There is no user with that Email address " + $" {loginRequest.Username}");
+                }
+            }
+            else
+            {
+                applicationUser = await ValidateUserName(loginRequest.Username);
+                if (applicationUser == null)
+                {
+                    throw new NotFoundException("There is no user with that Username " + $" {loginRequest.Username}");
+                }
+            }
+
+            var result = await _signInManager.PasswordSignInAsync(applicationUser.UserName, loginRequest.Password, false, false);
+
+            if (!result.Succeeded)
+            {
+                throw new InvalidException("Invalid Password.");
+            }
+
+            response.Uid = applicationUser.Id;
+            response.ApiKey = _configuration["ApiKey"];
+
+            webResponse.status = true;
+            webResponse.message = "Login Successfully";
+            webResponse.data = response;
+
+            return webResponse;
         }
 
         public async Task<WebResponse> Register(EmployeeRequest employeeRequest)
