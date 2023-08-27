@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PersonalProfile.Interface;
+using PersonalProfile.Model.Profile;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,36 +16,55 @@ namespace PersonalProfile.Controllers
     [ApiController]
     public class ProfileController : ControllerBase
     {
-        // GET: api/<ProfileController>
-        [HttpGet]
-        public IEnumerable<string> Get()
+        private readonly IProfile _profile;
+
+        public ProfileController(IProfile profile)
         {
-            return new string[] { "value1", "value2" };
+            _profile = profile;
+        }
+        [HttpGet("{Id}")]
+        public async Task<IActionResult> GetProfileById([FromRoute] string Id)
+        {
+            if (ModelState.IsValid)
+            {
+                var result = await _profile.GetProfileById(Id);
+                return Ok(result);
+            }
+            return BadRequest("Some Properties are not valid ");
         }
 
-        // GET api/<ProfileController>/5
-        [HttpGet("{id}")]
-        public string Get(int id)
+        [HttpPost("{Id}")]
+        public async Task<IActionResult> CreateProfile([FromRoute] string Id, [FromBody] ProfileRequest profileRequest)
         {
-            return "value";
+            if (ModelState.IsValid)
+            {
+                var result = await _profile.CreateProfileAsync(Id, profileRequest);
+                return Ok(result);
+            }
+            return BadRequest("Some Properties are not valid ");
         }
 
-        // POST api/<ProfileController>
-        [HttpPost]
-        public void Post([FromBody] string value)
-        {
-        }
-
-        // PUT api/<ProfileController>/5
         [HttpPut("{id}")]
-        public void Put(int id, [FromBody] string value)
+        public async Task<IActionResult> UpdateProfile([FromRoute] string Id, [FromBody] ProfileRequest profileRequest)
         {
+            if (ModelState.IsValid)
+            {
+                var result = await _profile.UpdateProfileAsync(Id, profileRequest);
+                return Ok(result);
+            }
+            return BadRequest("Some Properties are not valid ");
         }
 
-        // DELETE api/<ProfileController>/5
-        [HttpDelete("{id}")]
-        public void Delete(int id)
+        [HttpDelete("{Id}")]
+        public async Task<IActionResult> DeleteMovies([FromRoute] string Id)
         {
+            if (ModelState.IsValid)
+            {
+                var result = await _profile.DeleteProfileAsync(Id);
+                return Ok(result);
+            }
+            return BadRequest("Some Properties are not valid ");
         }
+
     }
 }

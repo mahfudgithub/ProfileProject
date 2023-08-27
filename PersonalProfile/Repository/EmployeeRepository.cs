@@ -57,6 +57,7 @@ namespace PersonalProfile.Repository
             }
 
             response.Uid = applicationUser.Id;
+            response.Username = applicationUser.UserName;
             response.ApiKey = _configuration["ApiKey"];
 
             webResponse.status = true;

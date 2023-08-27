@@ -69,6 +69,7 @@ namespace PersonalProfile
                 .AddEntityFrameworkStores<AppDbContext>();
 
             services.AddTransient<IEmployee, EmployeeRepository>();
+            services.AddTransient<IProfile, ProfileRepository>();
             services.AddSingleton<ILoggerManager, LoggerManager>();
             services.AddTransient<IApiKeyValidation, ApiKeyValidation>();
             services.AddScoped<IAuthorizationHandler, ApiKeyHandler>();
