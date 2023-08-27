@@ -1,5 +1,7 @@
+using LoggerService;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -7,7 +9,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
+using NLog;
 using PersonalProfile.DataContext;
+using PersonalProfile.Exceptions;
+using PersonalProfile.Interface;
+using PersonalProfile.Repository;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -22,12 +28,14 @@ namespace PersonalProfile
         public static string ConnectionString { get; private set; }
         public Startup(IConfiguration configuration)
         {
+            LogManager.Setup().LoadConfigurationFromFile(Path.Combine(Directory.GetCurrentDirectory(), "nlog.config"));
             Configuration = configuration;
 
             ConnectionString = Configuration.GetConnectionString("DefaultConnection");
         }
 
         public IConfiguration Configuration { get; }
+        private readonly string _policyName = "CorsPolicy";
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
@@ -35,6 +43,27 @@ namespace PersonalProfile
             services.AddDbContext<AppDbContext>(options =>
                 options.UseSqlServer(ConnectionString)
             );
+
+            services.AddIdentity<ApplicationUser, IdentityRole>(opt =>
+            {
+                opt.Password.RequireDigit = true;
+                opt.Password.RequiredLength = 5;
+            })
+                .AddEntityFrameworkStores<AppDbContext>();
+
+            services.AddTransient<IEmployee, EmployeeRepository>();
+            services.AddSingleton<ILoggerManager, LoggerManager>();
+
+            services.AddCors(option =>
+            {
+                option.AddPolicy(_policyName, builder =>
+                {
+                    builder
+                    .WithOrigins(Configuration["AppClientUrl"])
+                    .WithMethods("PUT", "DELETE", "POST", "GET")
+                    .AllowAnyHeader();
+                });
+            });
 
             services.AddSwaggerGen(c =>
             {
@@ -48,6 +77,7 @@ namespace PersonalProfile
             });
 
             services.AddControllers();
+            services.AddRazorPages();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -73,6 +103,9 @@ namespace PersonalProfile
             app.UseStaticFiles();
 
             app.UseAuthorization();
+            app.UseCors(_policyName);
+
+            app.ConfigureExceptionHandler();
 
             app.UseEndpoints(endpoints =>
             {
